@@ -1,9 +1,11 @@
-from asyncio import run
-from datetime import timedelta
+from asyncio import as_completed, run
+from datetime import date, datetime, timedelta
 import json
 from pprint import pprint as pp
+import re
 
 from aiohttp import ClientSession
+from bs4 import BeautifulSoup
 from dateutil.parser import isoparse
 
 
@@ -79,8 +81,10 @@ async def digitec(session: ClientSession):
     }
 
     async with session.post(url, headers=headers, data=payload) as response:
-        data = await response.json()
+        return digitec_data(await response.json())
 
+
+async def digitec_data(data):
     product_wrappers = data[0]["data"]["dailyDeal"]["previews"]
     for wrapper in product_wrappers:
         product = wrapper["product"]["product"]
@@ -103,15 +107,63 @@ async def digitec(session: ClientSession):
             "valid-for": timedelta(days=1),
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
             "portal": portal,
+            "currency": "CHF",
         }
+
+        info["percent-available"] = (1 - info["quantity-sold"] / info["quantity-total"]) * 100
 
         yield info
 
 
+async def brack(session):
+    async with session.get("https://daydeal.ch") as response:
+        return brack_data(await response.text())
+
+
+async def brack_data(raw):
+    html = BeautifulSoup(raw, "html.parser")
+
+    url = html.find(class_="js-product-button")
+    url = url.href if url else ""
+
+    info = {
+        "name": html.find(class_="product-description__title1").text,
+        "brand": "",
+        "id": -1,
+        "rating": -1,
+        "rating-top": -1,
+        "description": (
+            html.find(class_="product-description__title2").text
+            + "\n"
+            + html.find(class_="product-description__list").text.strip()
+        ),
+        "image": html.find(class_="product-tabs__img").href,
+        "price-before": re.sub(r"\D", "", html.find(class_="js-old-price").text),
+        "price-after": re.sub(r"\D", "", html.find(class_="js-deal-price").text),
+        "quantity-total": -1,
+        "quantity-sold": -1,
+        "percent-available": re.sub(r"\D", "", html.find(class_="product-progress__availability").text),
+        "valid-from": datetime.combine(date.today(), datetime.min.time()),
+        "valid-for": timedelta(days=1),
+        "portal": "Brack / daydeal.ch",
+        "url": url,
+        "currency": "CHF",
+    }
+
+    yield info
+
+
 async def main():
     async with ClientSession() as session:
-        async for offer in digitec(session):
-            pp(offer)
+        tasks = [
+            digitec(session),
+            brack(session),
+        ]
+
+        for result in as_completed(tasks):
+            result = await result
+            async for offer in result:
+                pp(offer)
 
 
 run(main())
