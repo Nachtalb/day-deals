@@ -62,22 +62,22 @@ async def digitec_data(data):
             "name": product["name"],
             "brand": product["brandName"],
             "rating": product["averageRating"],
-            "rating-top": 5,
+            "rating_top": 5,
             "description": f"{product['productTypeName']}, {product['nameProperties']}",
             "image": product["images"][0]["url"],
-            "price-before": offer["insteadOfPrice"]["price"]["amountIncl"],
-            "price-after": offer["price"]["amountIncl"],
-            "quantity-total": offer["salesInformation"]["numberOfItems"],
-            "quantity-sold": offer["salesInformation"]["numberOfItemsSold"],
-            "valid-from": isoparse(offer["salesInformation"]["validFrom"]),
-            "valid-for": timedelta(days=1),
+            "price_before": offer["insteadOfPrice"]["price"]["amountIncl"],
+            "price_after": offer["price"]["amountIncl"],
+            "quantity_total": offer["salesInformation"]["numberOfItems"],
+            "quantity_sold": offer["salesInformation"]["numberOfItemsSold"],
+            "valid_from": isoparse(offer["salesInformation"]["validFrom"]),
+            "valid_for": timedelta(days=1),
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
             "portal": portal.title(),
             "currency": "CHF",
-            "next-sale-at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
+            "next_sale_at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
         }
 
-        info["percent-available"] = (1 - info["quantity-sold"] / info["quantity-total"]) * 100
+        info["percent_available"] = (1 - info["quantity_sold"] / info["quantity_total"]) * 100
 
         yield info
 
@@ -101,24 +101,24 @@ async def brack_data(raw):
         "brand": "",
         "id": -1,
         "rating": -1,
-        "rating-top": -1,
+        "rating_top": -1,
         "description": (
             html.find(class_="product-description__title2").text
             + "\n"
             + html.find(class_="product-description__list").text.strip()
         ),
         "image": html.find(class_="product-tabs__img").src,
-        "price-before": int(re.sub(r"\D", "", html.find(class_="js-old-price").text)),
-        "price-after": int(re.sub(r"\D", "", html.find(class_="js-deal-price").text)),
-        "quantity-total": -1,
-        "quantity-sold": -1,
-        "percent-available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
-        "valid-from": today,
-        "valid-for": timedelta(days=1),
+        "price_before": int(re.sub(r"\D", "", html.find(class_="js-old-price").text)),
+        "price_after": int(re.sub(r"\D", "", html.find(class_="js-deal-price").text)),
+        "quantity_total": -1,
+        "quantity_sold": -1,
+        "percent_available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
+        "valid_from": today,
+        "valid_for": timedelta(days=1),
         "portal": "Brack / daydeal.ch",
         "url": url,
         "currency": "CHF",
-        "next-sale-at": next_sale_at,
+        "next_sale_at": next_sale_at,
     }
 
     yield info
@@ -137,32 +137,32 @@ async def twenty_min_data(raw):
         "brand": "",
         "id": -1,
         "rating": -1,
-        "rating-top": -1,
+        "rating_top": -1,
         "description": html.find(class_="deal-subtitle").text.strip(),
         "image": html.find(class_="deal-img").find("img").attrs["data-src"],
-        "price-before": int(float(html.find(class_="deal-old-price").find("span").text)),
-        "price-after": int(float(html.find(class_="deal-price").text)),
-        "quantity-total": -1,
-        "percent-available": int(html.find(class_="deal-inventory").text),
-        "valid-from": datetime.combine(date.today(), datetime.min.time()),
-        "valid-for": timedelta(days=1),
+        "price_before": int(float(html.find(class_="deal-old-price").find("span").text)),
+        "price_after": int(float(html.find(class_="deal-price").text)),
+        "quantity_total": -1,
+        "percent_available": int(html.find(class_="deal-inventory").text),
+        "valid_from": datetime.combine(date.today(), datetime.min.time()),
+        "valid_for": timedelta(days=1),
         "portal": "20min",
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
-        "next-sale-at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
+        "next_sale_at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
     }
-    info["quantity-sold"] = info["quantity-total"] * (info["percent-available"] / 100)
+    info["quantity_sold"] = info["quantity_total"] * (info["percent_available"] / 100)
     yield info
 
 
 async def send_to_telegram(session, offer):
     print(offer["portal"])
-    if offer["quantity-total"] > 0:
-        availability = f"Noch {offer['quantity-total'] - offer['quantity-sold']} Stück verfügbar!"
-    elif offer["percent-available"] > 0:
-        availability = f"Noch {offer['percent-available']}% verfügbar!"
+    if offer["quantity_total"] > 0:
+        availability = f"Noch {offer['quantity_total'] - offer['quantity_sold']} Stück verfügbar!"
+    elif offer["percent_available"] > 0:
+        availability = f"Noch {offer['percent_available']}% verfügbar!"
     else:
-        hours_to_sale = (offer["next-sale-at"] - datetime.now()).seconds // 60 // 60
+        hours_to_sale = (offer["next_sale_at"] - datetime.now()).seconds // 60 // 60
         availability = f"Ausverkauft, schau in {hours_to_sale} Stunden wieder nach!"
 
     text = f"""<b>{offer['portal']}: {offer['name']}</b>
@@ -170,7 +170,7 @@ async def send_to_telegram(session, offer):
 
 {availability}
 
-<s>{offer['price-before']} {offer['currency']}</s> {offer['price-after']} {offer['currency']}
+<s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}
 
 <a href="{offer['image']}">​</a>
 """
@@ -184,7 +184,7 @@ async def send_to_telegram(session, offer):
                 "inline_keyboard": [
                     [
                         {
-                            "text": "Zum Angebot ➡️" if offer["percent-available"] > 0 else "Ausverkauft 😔",
+                            "text": "Zum Angebot ➡️" if offer["percent_available"] > 0 else "Ausverkauft 😔",
                             "url": offer["url"],
                         }
                     ]
