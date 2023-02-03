@@ -165,7 +165,12 @@ async def send_to_telegram(session, offer):
         hours_to_sale = (offer["next_sale_at"] - datetime.now()).seconds // 60 // 60
         availability = f"Ausverkauft, schau in {hours_to_sale} Stunden wieder nach!"
 
-    text = f"""<b>{offer['portal']}: {offer['name']}</b>
+    if offer["rating"] > 0:
+        rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
+    else:
+        rating = ""
+
+    text = f"""<b>{offer['portal']}: {offer['name']} {rating}</b>
 {offer['description']}
 
 {availability}
