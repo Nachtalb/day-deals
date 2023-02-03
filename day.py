@@ -171,6 +171,8 @@ async def send_to_telegram(session, offer):
 {availability}
 
 <s>{offer['price-before']} {offer['currency']}</s> {offer['price-after']} {offer['currency']}
+
+<a href="{offer['image']}">​</a>
 """
 
     data = {
