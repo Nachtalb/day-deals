@@ -158,7 +158,9 @@ async def twenty_min_data(raw):
 async def send_to_telegram(session, offer):
     print(offer["portal"])
     if offer["quantity_total"] > 0:
-        availability = f"Noch {offer['quantity_total'] - offer['quantity_sold']} Stück verfügbar!"
+        availability = (
+            f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} Stück verfügbar!"
+        )
     elif offer["percent_available"] > 0:
         availability = f"Noch {offer['percent_available']}% verfügbar!"
     else:
