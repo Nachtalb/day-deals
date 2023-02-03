@@ -1,4 +1,4 @@
-from asyncio import as_completed, run
+from asyncio import as_completed, gather, run
 from datetime import date, datetime, timedelta
 import json
 from pprint import pprint as pp
@@ -30,40 +30,6 @@ async def digitec(session: ClientSession):
                     " isEndingSoon\n    validFrom\n  }\n  insteadOfPrice {\n    price {\n      amountIncl\n     "
                     " currency\n    }\n  }\n}"
                 ),
-                #  "query": (
-                #      "query GET_DAILY_DEAL_PREVIEWS($portalIds: [Int!]) {\n  dailyDeal {\n    previews(portalIds:"
-                #      " $portalIds) {\n      portalId\n      product {\n        ...ProductWithOffer\n       "
-                #      " __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment"
-                #      " ProductWithOffer on ProductWithOffer {\n  mandatorSpecificData {\n   "
-                #      " ...ProductMandatorSpecific\n    __typename\n  }\n  product {\n   "
-                #      " ...ProductMandatorIndependent\n    __typename\n  }\n  offer {\n    ...ProductOffer\n   "
-                #      " __typename\n  }\n  isDefaultOffer\n  __typename\n}\n\nfragment ProductMandatorSpecific on"
-                #      " MandatorSpecificData {\n  isBestseller\n  isDeleted\n  showroomSites\n  sectorIds\n "
-                #      " hasVariants\n  __typename\n}\n\nfragment ProductMandatorIndependent on ProductV2 {\n  id\n "
-                #      " productId\n  name\n  nameProperties\n  productTypeId\n  productTypeName\n  brandId\n "
-                #      " brandName\n  averageRating\n  totalRatings\n  totalQuestions\n  isProductSet\n  images {\n   "
-                #      " url\n    height\n    width\n    __typename\n  }\n  energyEfficiency {\n   "
-                #      " energyEfficiencyColorType\n    energyEfficiencyLabelText\n    energyEfficiencyLabelSigns\n   "
-                #      " energyEfficiencyImage {\n      url\n      height\n      width\n      __typename\n    }\n   "
-                #      " __typename\n  }\n  seo {\n    seoProductTypeName\n    seoNameProperties\n    productGroups"
-                #      " {\n      productGroup1\n      productGroup2\n      productGroup3\n      productGroup4\n     "
-                #      " __typename\n    }\n    gtin\n    __typename\n  }\n  smallDimensions\n  basePrice {\n   "
-                #      " priceFactor\n    value\n    __typename\n  }\n  productDataSheet {\n    name\n    languages\n "
-                #      "   url\n    size\n    __typename\n  }\n  __typename\n}\n\nfragment ProductOffer on OfferV2 {\n"
-                #      "  id\n  productId\n  offerId\n  shopOfferId\n  price {\n    amountIncl\n    amountExcl\n   "
-                #      " currency\n    __typename\n  }\n  deliveryOptions {\n    mail {\n      classification\n     "
-                #      " futureReleaseDate\n      __typename\n    }\n    pickup {\n      siteId\n     "
-                #      " classification\n      futureReleaseDate\n      __typename\n    }\n    detailsProvider {\n    "
-                #      "  productId\n      offerId\n      quantity\n      type\n      __typename\n    }\n   "
-                #      " __typename\n  }\n  label\n  labelType\n  type\n  volumeDiscountPrices {\n    minAmount\n   "
-                #      " price {\n      amountIncl\n      amountExcl\n      currency\n      __typename\n    }\n   "
-                #      " isDefault\n    __typename\n  }\n  salesInformation {\n    numberOfItems\n   "
-                #      " numberOfItemsSold\n    isEndingSoon\n    validFrom\n    __typename\n  }\n  incentiveText\n "
-                #      " isIncentiveCashback\n  isNew\n  isSalesPromotion\n  hideInProductDiscovery\n "
-                #      " canAddToBasket\n  hidePrice\n  insteadOfPrice {\n    type\n    price {\n      amountIncl\n   "
-                #      "   amountExcl\n      currency\n      __typename\n    }\n    __typename\n  }\n "
-                #      " minOrderQuantity\n  __typename\n}\n"
-                #  ),
             }
         ]
     )
@@ -106,8 +72,9 @@ async def digitec_data(data):
             "valid-from": isoparse(offer["salesInformation"]["validFrom"]),
             "valid-for": timedelta(days=1),
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
-            "portal": portal,
+            "portal": portal.title(),
             "currency": "CHF",
+            "next-sale-at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
         }
 
         info["percent-available"] = (1 - info["quantity-sold"] / info["quantity-total"]) * 100
@@ -124,7 +91,10 @@ async def brack_data(raw):
     html = BeautifulSoup(raw, "html.parser")
 
     url = html.find(class_="js-product-button")
-    url = url.href if url else ""
+    url = url.href if url else "https://daydeal.ch/"
+
+    today = datetime.combine(date.today(), datetime.min.time())
+    next_sale_at = today + (timedelta(hours=9) if datetime.now().hour < 9 else timedelta(days=1, hours=9))
 
     info = {
         "name": html.find(class_="product-description__title1").text,
@@ -138,23 +108,24 @@ async def brack_data(raw):
             + html.find(class_="product-description__list").text.strip()
         ),
         "image": html.find(class_="product-tabs__img").src,
-        "price-before": re.sub(r"\D", "", html.find(class_="js-old-price").text),
-        "price-after": re.sub(r"\D", "", html.find(class_="js-deal-price").text),
+        "price-before": int(re.sub(r"\D", "", html.find(class_="js-old-price").text)),
+        "price-after": int(re.sub(r"\D", "", html.find(class_="js-deal-price").text)),
         "quantity-total": -1,
         "quantity-sold": -1,
-        "percent-available": re.sub(r"\D", "", html.find(class_="product-progress__availability").text),
-        "valid-from": datetime.combine(date.today(), datetime.min.time()),
+        "percent-available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
+        "valid-from": today,
         "valid-for": timedelta(days=1),
         "portal": "Brack / daydeal.ch",
         "url": url,
         "currency": "CHF",
+        "next-sale-at": next_sale_at,
     }
 
     yield info
 
 
 async def twenty_min(session):
-    async with session.get("https://myshop.20min.ch/en_US/") as response:
+    async with session.get("https://myshop.20min.ch/de_DE/") as response:
         return twenty_min_data(await response.text())
 
 
@@ -169,18 +140,63 @@ async def twenty_min_data(raw):
         "rating-top": -1,
         "description": html.find(class_="deal-subtitle").text.strip(),
         "image": html.find(class_="deal-img").find("img").attrs["data-src"],
-        "price-before": float(html.find(class_="deal-old-price").find("span").text),
-        "price-after": float(html.find(class_="deal-price").text),
-        "quantity-total": int(re.sub(r"\D", "", html.find(class_="deal-products-quantity").text)),
+        "price-before": int(float(html.find(class_="deal-old-price").find("span").text)),
+        "price-after": int(float(html.find(class_="deal-price").text)),
+        "quantity-total": -1,
         "percent-available": int(html.find(class_="deal-inventory").text),
         "valid-from": datetime.combine(date.today(), datetime.min.time()),
         "valid-for": timedelta(days=1),
         "portal": "20min",
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
+        "next-sale-at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
     }
     info["quantity-sold"] = info["quantity-total"] * (info["percent-available"] / 100)
     yield info
+
+
+async def send_to_telegram(session, offer):
+    print(offer["portal"])
+    if offer["quantity-total"] > 0:
+        availability = f"Noch {offer['quantity-total'] - offer['quantity-sold']} Stück verfügbar!"
+    elif offer["percent-available"] > 0:
+        availability = f"Noch {offer['percent-available']}% verfügbar!"
+    else:
+        hours_to_sale = (offer["next-sale-at"] - datetime.now()).seconds // 60 // 60
+        availability = f"Ausverkauft, schau in {hours_to_sale} Stunden wieder nach!"
+
+    text = f"""<b>{offer['portal']}: {offer['name']}</b>
+{offer['description']}
+
+{availability}
+
+<s>{offer['price-before']} {offer['currency']}</s> {offer['price-after']} {offer['currency']}
+"""
+
+    data = {
+        "text": text,
+        "chat_id": -1001830374932,
+        "parse_mode": "HTML",
+        "reply_markup": json.dumps(
+            {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "Zum Angebot ➡️" if offer["percent-available"] > 0 else "Ausverkauft 😔",
+                            "url": offer["url"],
+                        }
+                    ]
+                ]
+            }
+        ),
+    }
+
+    async with session.post(
+        "https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/sendMessage", data=data
+    ) as response:
+        if response.status != 200:
+            data = await response.json()
+            print(data)
 
 
 async def main():
@@ -191,10 +207,14 @@ async def main():
             twenty_min(session),
         ]
 
+        senders = []
+
         for result in as_completed(tasks):
             result = await result
             async for offer in result:
-                pp(offer)
+                senders.append(send_to_telegram(session, offer))
+
+        [await result for result in as_completed(senders)]
 
 
 run(main())
