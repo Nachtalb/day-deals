@@ -81,15 +81,14 @@ async def digitec_data(data):
 
 
 async def brack(session, day=True):
-    if day:
-        path = ""
-    else:
-        path = "deal-of-the-week"
-    async with session.get(f"https://daydeal.ch/{path}") as response:
-        return brack_data(await response.text(), day)
+    url = "https://daydeal.ch/"
+    if not day:
+        url += "deal-of-the-week"
+    async with session.get(url) as response:
+        return brack_data(await response.text(), day, url)
 
 
-async def brack_data(raw, day=True):
+async def brack_data(raw, day, url):
     html = BeautifulSoup(raw, "html.parser")
 
     today = datetime.combine(date.today(), datetime.min.time())
@@ -104,10 +103,6 @@ async def brack_data(raw, day=True):
         next_sale_at = today + timedelta(days=7 - today.weekday(), hours=9)
         next_sale_at = next_sale_at - timedelta(days=7) if today.weekday() == 0 and now.hour < 9 else next_sale_at
         current_id = (next_sale_at - timedelta(days=7)).strftime("%d%m%Y")
-
-    url = html.find(class_="js-product-button")
-    url = html.find(class_="product-pricing__buy")
-    url = url.attrs["href"] if url else "https://daydeal.ch/"
 
     info = {
         "name": html.find(class_="product-description__title1").text,
@@ -346,7 +341,7 @@ async def send_to_telegram(session, task):
                 "msg": task["payload"],
                 "offer": task["offer"],
             }
-        elif "message is not modified" not in data["description"]:
+        elif "message is not modified" not in data.get("description", ""):
             print(f"{data=}\n{task=}")
 
 
