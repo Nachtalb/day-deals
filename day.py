@@ -1,8 +1,7 @@
-from asyncio import as_completed, gather, run
+from asyncio import as_completed, run
 from datetime import date, datetime, timedelta
 import json
 from pathlib import Path
-from pprint import pprint as pp
 import re
 
 from aiohttp import ClientSession
@@ -115,7 +114,7 @@ async def brack_data(raw):
             + "\n"
             + html.find(class_="product-description__list").text.strip()
         ),
-        "image": html.find(class_="product-tabs__img").src,
+        "image": html.find(class_="product-tabs__img").attrs["src"],
         "price_before": int(re.sub(r"\D", "", html.find(class_="js-old-price").text)),
         "price_after": int(re.sub(r"\D", "", html.find(class_="js-deal-price").text)),
         "quantity_total": -1,
