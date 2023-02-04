@@ -1,6 +1,7 @@
 from asyncio import as_completed, gather, run
 from datetime import date, datetime, timedelta
 import json
+from pathlib import Path
 from pprint import pprint as pp
 import re
 
@@ -94,12 +95,19 @@ async def brack_data(raw):
     url = url.href if url else "https://daydeal.ch/"
 
     today = datetime.combine(date.today(), datetime.min.time())
-    next_sale_at = today + (timedelta(hours=9) if datetime.now().hour < 9 else timedelta(days=1, hours=9))
+    today_deal_time = today + timedelta(hours=9)
+
+    if datetime.now().hour > 9:
+        next_sale_at = today_deal_time + timedelta(days=1)
+        current_id = today.strftime("%d%m%Y")
+    else:
+        next_sale_at = today_deal_time
+        current_id = (today + timedelta(days=-1)).strftime("%d%m%Y")
 
     info = {
         "name": html.find(class_="product-description__title1").text,
         "brand": "",
-        "id": -1,
+        "id": current_id,
         "rating": -1,
         "rating_top": -1,
         "description": (
@@ -135,7 +143,7 @@ async def twenty_min_data(raw):
     info = {
         "name": html.find(class_="deal-title").text,
         "brand": "",
-        "id": -1,
+        "id": date.today().strftime("%d%m%Y"),
         "rating": -1,
         "rating_top": -1,
         "description": html.find(class_="deal-subtitle").text.strip(),
@@ -156,7 +164,6 @@ async def twenty_min_data(raw):
 
 
 async def send_to_telegram(session, offer):
-    print(offer["portal"])
     if offer["quantity_total"] > 0:
         availability = (
             f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} Stück verfügbar!"
@@ -200,12 +207,18 @@ async def send_to_telegram(session, offer):
         ),
     }
 
+    if TODAYS_IDS[offer["portal"]].get("id") != offer["id"]:
+        method = "sendMessage"
+    else:
+        method = "editMessageText"
+        data["message_id"] = TODAYS_IDS[offer["portal"]]["mid"]
+
     async with session.post(
-        "https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/sendMessage", data=data
+        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=data
     ) as response:
-        if response.status != 200:
-            data = await response.json()
-            print(data)
+        data = await response.json()
+        if data["ok"]:
+            TODAYS_IDS[offer["portal"]] = {"id": offer["id"], "mid": data["result"]["message_id"]}
 
 
 async def main():
@@ -221,9 +234,17 @@ async def main():
         for result in as_completed(tasks):
             result = await result
             async for offer in result:
+                TODAYS_IDS.setdefault(offer["portal"], {})
                 senders.append(send_to_telegram(session, offer))
 
         [await result for result in as_completed(senders)]
 
 
+path = Path(__file__).with_name("todays_ids.json")
+path.touch()
+
+TODAYS_IDS: dict = json.loads((path.read_text().strip() or "{}"))
+
 run(main())
+
+path.write_text(json.dumps(TODAYS_IDS))
