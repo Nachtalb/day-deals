@@ -63,7 +63,7 @@ async def digitec_data(data):
             "brand": product["brandName"],
             "rating": product["averageRating"],
             "rating_top": 5,
-            "description": f"{product['productTypeName']}, {product['nameProperties']}",
+            "description": f"{product['productTypeName']}, {product['nameProperties']}".strip(" ,"),
             "image": product["images"][0]["url"],
             "price_before": offer["insteadOfPrice"]["price"]["amountIncl"],
             "price_after": offer["price"]["amountIncl"],
@@ -81,12 +81,18 @@ async def digitec_data(data):
         yield info
 
 
-async def brack(session):
-    async with session.get("https://daydeal.ch") as response:
-        return brack_data(await response.text())
+async def brack(session, day=True):
+    if day:
+        portal = "Brack / daydeal.ch Tagesangebot"
+        path = ""
+    else:
+        portal = "Brack / daydeal.ch Wochenangebot"
+        path = "deal-of-the-week"
+    async with session.get(f"https://daydeal.ch/{path}") as response:
+        return brack_data(await response.text(), portal)
 
 
-async def brack_data(raw):
+async def brack_data(raw, portal):
     html = BeautifulSoup(raw, "html.parser")
 
     url = html.find(class_="js-product-button")
@@ -109,11 +115,7 @@ async def brack_data(raw):
         "id": current_id,
         "rating": -1,
         "rating_top": -1,
-        "description": (
-            html.find(class_="product-description__title2").text
-            + "\n"
-            + html.find(class_="product-description__list").text.strip()
-        ),
+        "description": html.find(class_="product-description__title2").text,
         "image": html.find(class_="product-tabs__img").attrs["src"],
         "price_before": int(re.sub(r"\D", "", html.find(class_="js-old-price").text)),
         "price_after": int(re.sub(r"\D", "", html.find(class_="js-deal-price").text)),
@@ -121,7 +123,7 @@ async def brack_data(raw):
         "quantity_sold": -1,
         "percent_available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
         "valid_from": today,
-        "portal": "Brack / daydeal.ch",
+        "portal": portal,
         "url": url,
         "currency": "CHF",
         "next_sale_at": next_sale_at,
@@ -130,12 +132,18 @@ async def brack_data(raw):
     yield info
 
 
-async def twenty_min(session):
-    async with session.get("https://myshop.20min.ch/de_DE/category/angebot-des-tages") as response:
-        return twenty_min_data(await response.text())
+async def twenty_min(session, day=True):
+    if day:
+        portal = "20min Tagesangebot"
+        path = "angebot-des-tages"
+    else:
+        portal = "20min Wochenangebot"
+        path = "angebot-der-woche"
+    async with session.get(f"https://myshop.20min.ch/de_DE/category/{path}") as response:
+        return twenty_min_data(await response.text(), portal)
 
 
-async def twenty_min_data(raw):
+async def twenty_min_data(raw, portal):
     html = BeautifulSoup(raw, "html.parser")
 
     info = {
@@ -151,7 +159,7 @@ async def twenty_min_data(raw):
         "quantity_total": -1,
         "percent_available": int(html.find(class_="deal-inventory").text),
         "valid_from": datetime.combine(date.today(), datetime.min.time()),
-        "portal": "20min",
+        "portal": portal,
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
         "next_sale_at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
@@ -324,6 +332,7 @@ async def send_to_telegram(session, task):
         data=task["payload"],
     ) as response:
         data = await response.json()
+        print(task["log"])
         if data["ok"] and task["update_id"]:
             TODAYS_IDS[task["portal"]] = {
                 "id": task["id"],
@@ -331,7 +340,7 @@ async def send_to_telegram(session, task):
                 "msg": task["payload"],
                 "offer": task["offer"],
             }
-        else:
+        elif "message is not modified" not in data["description"]:
             print(f"{data=}\n{task=}")
 
 
@@ -340,7 +349,9 @@ async def main():
         tasks = [
             digitec(session),
             brack(session),
+            brack(session, day=False),  # Wochenangebot
             twenty_min(session),
+            twenty_min(session, day=False),  # Wochenangebot
         ]
 
         senders = []
