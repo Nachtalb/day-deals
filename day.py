@@ -91,7 +91,8 @@ async def brack_data(raw):
     html = BeautifulSoup(raw, "html.parser")
 
     url = html.find(class_="js-product-button")
-    url = url.href if url else "https://daydeal.ch/"
+    url = html.find(class_="product-pricing__buy")
+    url = url.attrs["href"] if url else "https://daydeal.ch/"
 
     today = datetime.combine(date.today(), datetime.min.time())
     today_deal_time = today + timedelta(hours=9)
