@@ -167,11 +167,11 @@ async def send_to_telegram(session, offer):
     if offer["quantity_total"] > 0:
         percentage = (offer["quantity_total"] - offer["quantity_sold"]) / offer["quantity_total"] * 100
         availability = (
-            f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} St├╝ck verf├╝gbar!"
+            f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} Stück verfügbar!"
         )
     elif offer["percent_available"] > 0:
         percentage = offer["percent_available"]
-        availability = f"Noch {offer['percent_available']}% verf├╝gbar!"
+        availability = f"Noch {offer['percent_available']}% verfügbar!"
     else:
         hours_to_sale = (offer["next_sale_at"] - datetime.now()).seconds // 60 // 60
         percentage = 0
@@ -205,7 +205,7 @@ async def send_to_telegram(session, offer):
 <a href="{offer['image']}">​</a>
 """
 
-    data = {
+    payload = {
         "text": text,
         "chat_id": -1001830374932,
         "parse_mode": "HTML",
@@ -226,17 +226,22 @@ async def send_to_telegram(session, offer):
     if TODAYS_IDS[offer["portal"]].get("id") != offer["id"]:
         method = "sendMessage"
         print(f"🟢 {offer['portal']} - New Deal")
+    elif TODAYS_IDS[offer["portal"]].get("msg") == payload:
+        print(f"🟡 {offer['portal']} - Nothing changed")
+        return
     else:
         method = "editMessageText"
-        data["message_id"] = TODAYS_IDS[offer["portal"]]["mid"]
+        payload["message_id"] = TODAYS_IDS[offer["portal"]]["mid"]
         print(f"🔵 {offer['portal']} - Updated Deal")
 
     async with session.post(
-        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=data
+        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=payload
     ) as response:
         data = await response.json()
         if data["ok"]:
-            TODAYS_IDS[offer["portal"]] = {"id": offer["id"], "mid": data["result"]["message_id"]}
+            TODAYS_IDS[offer["portal"]] = {"id": offer["id"], "mid": data["result"]["message_id"], "msg": payload}
+        else:
+            print(f"{data=}\n{payload=}")
 
 
 async def main():
@@ -265,4 +270,4 @@ TODAYS_IDS: dict = json.loads((path.read_text().strip() or "{}"))
 
 run(main())
 
-path.write_text(json.dumps(TODAYS_IDS))
+path.write_text(json.dumps(TODAYS_IDS, ensure_ascii=False))
