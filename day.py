@@ -164,6 +164,8 @@ async def twenty_min_data(raw):
 
 
 async def send_to_telegram(session, offer):
+    portal = offer["portal"]
+
     if offer["quantity_total"] > 0:
         percentage = (offer["quantity_total"] - offer["quantity_sold"]) / offer["quantity_total"] * 100
         availability = (
@@ -195,7 +197,7 @@ async def send_to_telegram(session, offer):
     else:
         rating = ""
 
-    text = f"""<b>{offer['portal']}: {offer['name']} {rating}</b>
+    text = f"""<b>{portal}: {offer['name']} {rating}</b>
 {offer['description']}
 
 {availability}
@@ -223,23 +225,23 @@ async def send_to_telegram(session, offer):
         ),
     }
 
-    if TODAYS_IDS[offer["portal"]].get("id") != offer["id"]:
+    if TODAYS_IDS[portal].get("id") != offer["id"]:
         method = "sendMessage"
-        print(f"🟢 {offer['portal']} - New Deal")
-    elif TODAYS_IDS[offer["portal"]].get("msg") == payload:
-        print(f"🟡 {offer['portal']} - Nothing changed")
+        print(f"🟢 {portal} - New Deal")
+    elif TODAYS_IDS[portal].get("msg") == payload:
+        print(f"🟡 {portal} - Nothing changed")
         return
     else:
         method = "editMessageText"
-        payload["message_id"] = TODAYS_IDS[offer["portal"]]["mid"]
-        print(f"🔵 {offer['portal']} - Updated Deal")
+        payload["message_id"] = TODAYS_IDS[portal]["mid"]
+        print(f"🔵 {portal} - Updated Deal")
 
     async with session.post(
         f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=payload
     ) as response:
         data = await response.json()
         if data["ok"]:
-            TODAYS_IDS[offer["portal"]] = {"id": offer["id"], "mid": data["result"]["message_id"], "msg": payload}
+            TODAYS_IDS[portal] = {"id": offer["id"], "mid": data["result"]["message_id"], "msg": payload}
         else:
             print(f"{data=}\n{payload=}")
 
