@@ -138,7 +138,7 @@ async def twenty_min(session, day=True):
         path = "angebot-des-tages"
     else:
         portal = "20min Wochenangebot"
-        path = "angebot-der-woche"
+        path = "wochenangebot"
     async with session.get(f"https://myshop.20min.ch/de_DE/category/{path}") as response:
         return twenty_min_data(await response.text(), portal)
 
