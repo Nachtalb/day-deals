@@ -169,7 +169,7 @@ async def twenty_min_data(raw, portal):
 
 
 def get_availability(offer):
-    if offer["quantity_total"] > 0:
+    if offer["quantity_total"] > 0 and offer["quantity_sold"] != offer["quantity_total"]:
         percentage = (offer["quantity_total"] - offer["quantity_sold"]) / offer["quantity_total"] * 100
         availability = (
             f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} Stück verfügbar!"
