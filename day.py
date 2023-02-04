@@ -172,7 +172,7 @@ async def send_to_telegram(session, offer):
         availability = f"Noch {offer['percent_available']}% verfügbar!"
     else:
         hours_to_sale = (offer["next_sale_at"] - datetime.now()).seconds // 60 // 60
-        availability = f"Ausverkauft, schau in {hours_to_sale} Stunden wieder nach!"
+        availability = f"Ausverkauft! Schau in {hours_to_sale} Stunden wieder nach!"
 
     if offer["rating"] > 0:
         rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
