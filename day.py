@@ -1,12 +1,12 @@
 from asyncio import as_completed, run
 from datetime import date, datetime, timedelta
-import json
 from pathlib import Path
 import re
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from dateutil.parser import isoparse
+from jsondatetime import jsondatetime as json
 
 
 async def digitec(session: ClientSession):
@@ -69,8 +69,7 @@ async def digitec_data(data):
             "price_after": offer["price"]["amountIncl"],
             "quantity_total": offer["salesInformation"]["numberOfItems"],
             "quantity_sold": offer["salesInformation"]["numberOfItemsSold"],
-            "valid_from": isoparse(offer["salesInformation"]["validFrom"]),
-            "valid_for": timedelta(days=1),
+            "valid_from": isoparse(offer["salesInformation"]["validFrom"]).replace(tzinfo=None),
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
             "portal": portal.title(),
             "currency": "CHF",
@@ -122,7 +121,6 @@ async def brack_data(raw):
         "quantity_sold": -1,
         "percent_available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
         "valid_from": today,
-        "valid_for": timedelta(days=1),
         "portal": "Brack / daydeal.ch",
         "url": url,
         "currency": "CHF",
@@ -133,7 +131,7 @@ async def brack_data(raw):
 
 
 async def twenty_min(session):
-    async with session.get("https://myshop.20min.ch/de_DE/") as response:
+    async with session.get("https://myshop.20min.ch/de_DE/category/angebot-des-tages") as response:
         return twenty_min_data(await response.text())
 
 
@@ -153,7 +151,6 @@ async def twenty_min_data(raw):
         "quantity_total": -1,
         "percent_available": int(html.find(class_="deal-inventory").text),
         "valid_from": datetime.combine(date.today(), datetime.min.time()),
-        "valid_for": timedelta(days=1),
         "portal": "20min",
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
@@ -163,9 +160,7 @@ async def twenty_min_data(raw):
     yield info
 
 
-async def send_to_telegram(session, offer):
-    portal = offer["portal"]
-
+def get_availability(offer):
     if offer["quantity_total"] > 0:
         percentage = (offer["quantity_total"] - offer["quantity_sold"]) / offer["quantity_total"] * 100
         availability = (
@@ -190,7 +185,12 @@ async def send_to_telegram(session, offer):
     else:
         level = "🔴"
 
-    availability = f"{level} - {availability}"
+    return f"{level} - {availability}"
+
+
+def create_or_update_sale(offer):
+    portal = offer["portal"]
+    availability = get_availability(offer)
 
     if offer["rating"] > 0:
         rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
@@ -227,23 +227,112 @@ async def send_to_telegram(session, offer):
 
     if TODAYS_IDS[portal].get("id") != offer["id"]:
         method = "sendMessage"
-        print(f"🟢 {portal} - New Deal")
+        message = f"🟢 {portal} - New Deal"
     elif TODAYS_IDS[portal].get("msg") == payload:
         print(f"🟡 {portal} - Nothing changed")
         return
     else:
         method = "editMessageText"
         payload["message_id"] = TODAYS_IDS[portal]["mid"]
-        print(f"🔵 {portal} - Updated Deal")
+        message = f"🔵 {portal} - Updated Deal"
 
+    return {
+        "update_id": True,
+        "method": method,
+        "log": message,
+        "payload": payload,
+        "portal": offer["portal"],
+        "id": offer["id"],
+        "offer": offer,
+    }
+
+
+def update_obsolete_sale(offer):
+    portal = offer["portal"]
+    offer = TODAYS_IDS.get(portal, {}).get("offer")
+    if not offer:
+        return
+
+    availability = "🔴 The sale has ended, look out for the next one!"
+
+    if offer["rating"] > 0:
+        rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
+    else:
+        rating = ""
+
+    text = f"""<b>{portal}: {offer['name']} {rating}</b>
+{offer['description']}
+
+{availability}
+
+<s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}
+
+<a href="{offer['image']}">​</a>
+"""
+
+    payload = {
+        "text": text,
+        "chat_id": -1001830374932,
+        "parse_mode": "HTML",
+        "reply_markup": json.dumps(
+            {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "Angebor vorbei",
+                            "url": offer["url"],
+                        }
+                    ]
+                ]
+            }
+        ),
+    }
+
+    method = "editMessageText"
+    payload["message_id"] = TODAYS_IDS[portal]["mid"]
+    message = f"🟡 {portal} - Sale ended"
+
+    return {
+        "update_id": False,
+        "method": method,
+        "log": message,
+        "payload": payload,
+        "portal": offer["portal"],
+        "id": offer["id"],
+        "offer": offer,
+    }
+
+
+async def prepare_and_send_to_telegram(session, offer):
+    is_new = TODAYS_IDS[offer["portal"]].get("id") != offer["id"]
+
+    tasks = []
+    if task := create_or_update_sale(offer):
+        tasks.append(task)
+
+    if is_new and (task := update_obsolete_sale(offer)):
+        tasks.append(task)
+
+    if tasks:
+        tasks = [send_to_telegram(session, task) for task in tasks]
+        [await result for result in as_completed(tasks)]
+
+
+async def send_to_telegram(session, task):
     async with session.post(
-        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=payload
+        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{task['method']}",
+        data=task["payload"],
     ) as response:
         data = await response.json()
-        if data["ok"]:
-            TODAYS_IDS[portal] = {"id": offer["id"], "mid": data["result"]["message_id"], "msg": payload}
+        if data["ok"] and task["update_id"]:
+            TODAYS_IDS[task["portal"]] = {
+                "id": task["id"],
+                "mid": data["result"]["message_id"],
+                "msg": task["payload"],
+                "offer": task["offer"],
+            }
         else:
-            print(f"{data=}\n{payload=}")
+            print(f"{data=}\n{task=}")
 
 
 async def main():
@@ -260,7 +349,7 @@ async def main():
             result = await result
             async for offer in result:
                 TODAYS_IDS.setdefault(offer["portal"], {})
-                senders.append(send_to_telegram(session, offer))
+                senders.append(prepare_and_send_to_telegram(session, offer))
 
         [await result for result in as_completed(senders)]
 
@@ -268,8 +357,9 @@ async def main():
 path = Path(__file__).with_name("todays_ids.json")
 path.touch()
 
-TODAYS_IDS: dict = json.loads((path.read_text().strip() or "{}"))
+
+TODAYS_IDS: dict = json.loads(path.read_text().strip() or "{}")
 
 run(main())
 
-path.write_text(json.dumps(TODAYS_IDS, ensure_ascii=False))
+path.write_text(json.dumps(TODAYS_IDS, ensure_ascii=False, cls=json.DatetimeJSONEncoder))
