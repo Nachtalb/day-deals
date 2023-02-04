@@ -164,14 +164,30 @@ async def twenty_min_data(raw):
 
 async def send_to_telegram(session, offer):
     if offer["quantity_total"] > 0:
+        percentage = (offer["quantity_total"] - offer["quantity_sold"]) / offer["quantity_total"] * 100
         availability = (
-            f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} Stück verfügbar!"
+            f"Noch {offer['quantity_total'] - offer['quantity_sold']}/{offer['quantity_total']} St├╝ck verf├╝gbar!"
         )
     elif offer["percent_available"] > 0:
-        availability = f"Noch {offer['percent_available']}% verfügbar!"
+        percentage = offer["percent_available"]
+        availability = f"Noch {offer['percent_available']}% verf├╝gbar!"
     else:
         hours_to_sale = (offer["next_sale_at"] - datetime.now()).seconds // 60 // 60
+        percentage = 0
         availability = f"Ausverkauft! Schau in {hours_to_sale} Stunden wieder nach!"
+
+    if percentage > 50:
+        level = "🟢"
+    elif percentage > 30:
+        level = "🔵"
+    elif percentage > 15:
+        level = "🟡"
+    elif percentage > 0:
+        level = "🟠"
+    else:
+        level = "🔴"
+
+    availability = f"{level} - {availability}"
 
     if offer["rating"] > 0:
         rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
@@ -208,9 +224,11 @@ async def send_to_telegram(session, offer):
 
     if TODAYS_IDS[offer["portal"]].get("id") != offer["id"]:
         method = "sendMessage"
+        print(f"🟢 {offer['portal']} - New Deal")
     else:
         method = "editMessageText"
         data["message_id"] = TODAYS_IDS[offer["portal"]]["mid"]
+        print(f"🔵 {offer['portal']} - Updated Deal")
 
     async with session.post(
         f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{method}", data=data
