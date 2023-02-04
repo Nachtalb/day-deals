@@ -69,7 +69,6 @@ async def digitec_data(data):
             "price_after": offer["price"]["amountIncl"],
             "quantity_total": offer["salesInformation"]["numberOfItems"],
             "quantity_sold": offer["salesInformation"]["numberOfItemsSold"],
-            "valid_from": isoparse(offer["salesInformation"]["validFrom"]).replace(tzinfo=None),
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
             "portal": portal.title(),
             "currency": "CHF",
@@ -83,31 +82,32 @@ async def digitec_data(data):
 
 async def brack(session, day=True):
     if day:
-        portal = "Brack / daydeal.ch Tagesangebot"
         path = ""
     else:
-        portal = "Brack / daydeal.ch Wochenangebot"
         path = "deal-of-the-week"
     async with session.get(f"https://daydeal.ch/{path}") as response:
-        return brack_data(await response.text(), portal)
+        return brack_data(await response.text(), day)
 
 
-async def brack_data(raw, portal):
+async def brack_data(raw, day=True):
     html = BeautifulSoup(raw, "html.parser")
+
+    today = datetime.combine(date.today(), datetime.min.time())
+    now = datetime.now()
+    if day:
+        portal = "Brack / daydeal.ch Tagesangebot"
+        next_sale_at = today + timedelta(hours=9)
+        next_sale_at = next_sale_at if now.hour < 9 else (next_sale_at + timedelta(days=1))
+        current_id = (next_sale_at - timedelta(days=1)).strftime("%d%m%Y")
+    else:
+        portal = "Brack / daydeal.ch Wochenangebot"
+        next_sale_at = today + timedelta(days=7 - today.weekday(), hours=9)
+        next_sale_at = next_sale_at - timedelta(days=7) if today.weekday() == 0 and now.hour < 9 else next_sale_at
+        current_id = (next_sale_at - timedelta(days=7)).strftime("%d%m%Y")
 
     url = html.find(class_="js-product-button")
     url = html.find(class_="product-pricing__buy")
     url = url.attrs["href"] if url else "https://daydeal.ch/"
-
-    today = datetime.combine(date.today(), datetime.min.time())
-    today_deal_time = today + timedelta(hours=9)
-
-    if datetime.now().hour > 9:
-        next_sale_at = today_deal_time + timedelta(days=1)
-        current_id = today.strftime("%d%m%Y")
-    else:
-        next_sale_at = today_deal_time
-        current_id = (today + timedelta(days=-1)).strftime("%d%m%Y")
 
     info = {
         "name": html.find(class_="product-description__title1").text,
@@ -122,7 +122,6 @@ async def brack_data(raw, portal):
         "quantity_total": -1,
         "quantity_sold": -1,
         "percent_available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
-        "valid_from": today,
         "portal": portal,
         "url": url,
         "currency": "CHF",
@@ -134,22 +133,30 @@ async def brack_data(raw, portal):
 
 async def twenty_min(session, day=True):
     if day:
-        portal = "20min Tagesangebot"
         path = "angebot-des-tages"
     else:
-        portal = "20min Wochenangebot"
         path = "wochenangebot"
     async with session.get(f"https://myshop.20min.ch/de_DE/category/{path}") as response:
-        return twenty_min_data(await response.text(), portal)
+        return twenty_min_data(await response.text(), day)
 
 
-async def twenty_min_data(raw, portal):
+async def twenty_min_data(raw, day=True):
+    today = datetime.combine(date.today(), datetime.min.time())
+    if day:
+        portal = "20min Tagesangebot"
+        next_sale_at = today + timedelta(days=1)
+        current_id = today.strftime("%d%m%Y")
+    else:
+        portal = "20min Wochenangebot"
+        next_sale_at = today + timedelta(days=7 - today.weekday())
+        current_id = (next_sale_at - timedelta(days=7)).strftime("%d%m%Y")
+
     html = BeautifulSoup(raw, "html.parser")
 
     info = {
         "name": html.find(class_="deal-title").text,
         "brand": "",
-        "id": date.today().strftime("%d%m%Y"),
+        "id": current_id,
         "rating": -1,
         "rating_top": -1,
         "description": html.find(class_="deal-subtitle").text.strip(),
@@ -158,11 +165,10 @@ async def twenty_min_data(raw, portal):
         "price_after": int(float(html.find(class_="deal-price").text)),
         "quantity_total": -1,
         "percent_available": int(html.find(class_="deal-inventory").text),
-        "valid_from": datetime.combine(date.today(), datetime.min.time()),
         "portal": portal,
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
-        "next_sale_at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
+        "next_sale_at": next_sale_at,
     }
     info["quantity_sold"] = info["quantity_total"] * (info["percent_available"] / 100)
     yield info
