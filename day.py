@@ -217,7 +217,7 @@ def create_or_update_sale(offer):
 
     payload = {
         "text": text,
-        "chat_id": -1001830374932,
+        "chat_id": CONFIG["chat_id"],
         "parse_mode": "HTML",
         "reply_markup": json.dumps(
             {
@@ -328,7 +328,7 @@ async def prepare_and_send_to_telegram(session, offer):
 
 async def send_to_telegram(session, task):
     async with session.post(
-        f"https://api.telegram.org/bot5649916237:AAFv6gZZJxDMPV8JZhGBdWdLU3afbtTzBdY/{task['method']}",
+        f"https://api.telegram.org/bot{CONFIG['token']}/{task['method']}",
         data=task["payload"],
     ) as response:
         data = await response.json()
@@ -368,6 +368,8 @@ async def main():
 path = Path(__file__).with_name("todays_ids.json")
 path.touch()
 
+config_path = Path(__file__).with_name("config.json")
+CONFIG: dict = json.loads(config_path.read_text())
 
 TODAYS_IDS: dict = json.loads(path.read_text().strip() or "{}")
 
