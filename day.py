@@ -306,7 +306,7 @@ def update_obsolete_sale(offer):
 
     method = "editMessageText"
     payload["message_id"] = TODAYS_IDS[portal]["mid"]
-    message = f"🟡 {portal} - Sale ended"
+    message = f"🔴 {portal} - Sale ended"
 
     return {
         "update_id": False,
@@ -348,7 +348,7 @@ async def send_to_telegram(session, task):
                 "msg": task["payload"],
                 "offer": task["offer"],
             }
-        elif "message is not modified" not in data.get("description", ""):
+        elif not data["ok"] and "message is not modified" not in data.get("description", ""):
             print(f"{data=}\n{task=}")
 
 
