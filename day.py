@@ -65,7 +65,7 @@ async def digitec_data(data):
             "rating_top": 5,
             "description": f"{product['productTypeName']}, {product['nameProperties']}".strip(" ,"),
             "image": product["images"][0]["url"],
-            "price_before": offer["insteadOfPrice"]["price"]["amountIncl"],
+            "price_before": offer["insteadOfPrice"]["price"]["amountIncl"] if offer['insteadOfPrice'] else None,
             "price_after": offer["price"]["amountIncl"],
             "quantity_total": offer["salesInformation"]["numberOfItems"],
             "quantity_sold": offer["salesInformation"]["numberOfItemsSold"],
@@ -206,12 +206,19 @@ def create_or_update_sale(offer):
     else:
         rating = ""
 
+
+    if not offer['price_before']:
+        price = f"{offer['price_after']} {offer['currency']}"
+    else:
+        price = f"<s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}"
+
+
     text = f"""<b>{portal}: {offer['name']} {rating}</b>
 {offer['description']}
 
 {availability}
 
-<s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}
+{price}
 
 <a href="{offer['image']}">​</a>
 """
