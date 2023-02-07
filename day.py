@@ -197,6 +197,23 @@ def get_availability(offer):
     return f"{level} - {availability}"
 
 
+def clean_money(money: int | float | None) -> str | None:
+    """Unify money representation
+
+    None   => None
+    i10    => "10"
+    f22.00 => "22"
+    f22.90 => "22.90"
+    """
+    if money is None:
+        return
+    if isinstance(money, float) and int(money) == money:
+        money = int(money)
+    if isinstance(money, float):
+        return f"{money:.2f}"
+    return str(money)
+
+
 def create_or_update_sale(offer):
     portal = offer["portal"]
     availability = get_availability(offer)
@@ -206,12 +223,13 @@ def create_or_update_sale(offer):
     else:
         rating = ""
 
+    price_before = clean_money(offer["price_before"])
+    price_after = clean_money(offer["price_after"])
 
-    if not offer['price_before']:
-        price = f"{offer['price_after']} {offer['currency']}"
+    if not price_before:
+        price = f"{price_after} {offer['currency']}"
     else:
-        price = f"<s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}"
-
+        price = f"<s>{price_before} {offer['currency']}</s> {price_after} {offer['currency']}"
 
     text = f"""<b>{portal}: {offer['name']} {rating}</b>
 {offer['description']}
