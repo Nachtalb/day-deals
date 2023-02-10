@@ -1,0 +1,268 @@
+[
+  {
+    "retailer_name": "Daydeal.ch / Brack Tagesangebot",
+    "offer_id": "daydeal-daily",
+    "scrape_url": "https://daydeal.ch/",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/"
+    },
+    "schedule": "09:00",
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Daydeal.ch / Brack Wochenangebot",
+    "offer_id": "daydeal-weekly",
+    "scrape_url": "https://daydeal.ch/deal-of-the-week",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Daydeal.ch / Brack Wochenangebot",
+    "offer_id": "daydeal-weekly",
+    "scrape_url": "https://daydeal.ch/deal-of-the-week",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Daydeal.ch / Brack Wochenangebot",
+    "offer_id": "daydeal-weekly",
+    "scrape_url": "https://daydeal.ch/deal-of-the-week",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Daydeal.ch / Brack Wochenangebot",
+    "offer_id": "daydeal-weekly",
+    "scrape_url": "https://daydeal.ch/deal-of-the-week",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Daydeal.ch / Brack Wochenangebot",
+    "offer_id": "daydeal-weekly",
+    "scrape_url": "https://daydeal.ch/deal-of-the-week",
+    "title": ".product-description__title1",
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  },
+  {
+    "retailer_name": "Galaxus",
+    "offer_id": "galaxus",
+    "scrape_url": {
+      "method": "post",
+      "body": "[{\"operationName\": \"GET_DAILY_DEAL_PREVIEWS\", \"variables\": {\"portalIds\": [25, 22]}, \"query\": \"query GET_DAILY_DEAL_PREVIEWS($portalIds: [Int!]) {\\n  dailyDeal {\\n    previews(portalIds: $portalIds) {\\n      portalId\\n      product {\\n        ...ProductWithOffer\\n      }\\n    }\\n  }\\n}\\n\\nfragment ProductWithOffer on ProductWithOffer {\\n  product {\\n    ...ProductMandatorIndependent\\n  }\\n  offer {\\n    ...ProductOffer\\n  }\\n}\\n\\nfragment ProductMandatorIndependent on ProductV2 {\\n  id\\n  productId\\n  name\\n  nameProperties\\n  productTypeName\\n  brandId\\n  brandName\\n  averageRating\\n  totalRatings\\n  images {\\n    url\\n    height\\n    width\\n  }\\n}\\n\\nfragment ProductOffer on OfferV2 {\\n  id\\n  productId\\n  price {\\n    amountIncl\\n    currency\\n  }\\n  volumeDiscountPrices {\\n    price {\\n      amountIncl\\n      currency\\n    }\\n  }\\n  salesInformation {\\n    numberOfItems\\n    numberOfItemsSold\\n    isEndingSoon\\n    validFrom\\n  }\\n  insteadOfPrice {\\n    price {\\n      amountIncl\\n      currency\\n    }\\n  }\\n}\"}]",
+      "headers": {
+        "Host": "www.digitec.ch",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.120 Safari/537.36",
+        "Content-Type": "application/json",
+        "Accept": "*/*",
+        "Origin": "https://www.digitec.ch"
+      }
+    },
+    "title": { "driver": "json", "query": ".name" },
+    "summary": ".product-description__title2",
+    "image": {
+      "driver": "html",
+      "query": ".product-tabs__img",
+      "attribute": "src"
+    },
+    "url": {
+      "driver": "string",
+      "string": "https://daydeal.ch/deal-of-the-week"
+    },
+    "schedule": {
+      "time": "09:00",
+      "weekday": 0
+    },
+    "price_full": [
+      ".js-old-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "price_discount": [
+      ".js-deal-price",
+      { "driver": "regex", "regex": "\\d+(\\.\\d+)?", "method": "search" },
+      { "driver": "cast", "type": "float" },
+      { "driver": "money", "currency": "CHF" }
+    ],
+    "available_percentage": [
+      ".product-progress__availability",
+      { "driver": "regex", "regex": "\\d+" },
+      { "driver": "cast", "type": "int" }
+    ]
+  }
+]
