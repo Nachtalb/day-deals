@@ -5,7 +5,6 @@ import re
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
-from dateutil.parser import isoparse
 from jsondatetime import jsondatetime as json
 
 
@@ -281,32 +280,32 @@ def create_or_update_sale(offer):
     }
 
 
-def update_obsolete_sale(offer):
-    portal = offer["portal"]
-    offer = TODAYS_IDS.get(portal, {}).get("offer")
-    if not offer:
+def update_obsolete_sale(old_data: dict | None, next_sale_link: str | None):
+    if not old_data:
         return
+    offer = old_data["offer"]
 
-    availability = "🔴 The sale has ended, look out for the next one!"
+    if next_sale_link:
+        availability = f'🔴 Das Angebot ist vorbei, <a href="{next_sale_link}">schau dir das nächste an!</a>'
+    else:
+        availability = "🔴 Das Angebot ist vorbei, schau dir das nächste an!"
 
     if offer["rating"] > 0:
         rating = round(offer["rating"]) * "★" + ((offer["rating_top"] - round(offer["rating"])) * "☆")
     else:
         rating = ""
 
-    text = f"""<b>{portal}: {offer['name']} {rating}</b>
+    text = f"""<b>{offer['portal']}: {offer['name']} {rating}</b>
 {offer['description']}
-
+<a href="{offer['image']}">​</a>
 {availability}
 
 <s>{offer['price_before']} {offer['currency']}</s> {offer['price_after']} {offer['currency']}
-
-<a href="{offer['image']}">​</a>
 """
 
     payload = {
         "text": text,
-        "chat_id": -1001830374932,
+        "chat_id": CONFIG["chat_id"],
         "parse_mode": "HTML",
         "reply_markup": json.dumps(
             {
@@ -323,8 +322,8 @@ def update_obsolete_sale(offer):
     }
 
     method = "editMessageText"
-    payload["message_id"] = TODAYS_IDS[portal]["mid"]
-    message = f"🔴 {portal} - Sale ended"
+    payload["message_id"] = old_data["mid"]
+    message = f"🔴 {offer['portal']} - Sale ended"
 
     return {
         "update_id": False,
@@ -337,22 +336,30 @@ def update_obsolete_sale(offer):
     }
 
 
+def get_message_link(message: dict) -> str | None:
+    if message["chat"]["type"] not in ["private", "group"]:
+        if username := message["chat"].get("username"):
+            to_link = username
+        else:
+            # Get rid of leading -100 for supergroups
+            to_link = f"c/{str(message['chat']['id'])[4:]}"
+        return f"https://t.me/{to_link}/{message['message_id']}"
+    return
+
+
 async def prepare_and_send_to_telegram(session, offer):
-    is_new = TODAYS_IDS[offer["portal"]].get("id") != offer["id"]
+    old_data = TODAYS_IDS.get(offer["portal"])
+    is_new = old_data and old_data.get("id") != offer["id"]
+    message = None
 
-    tasks = []
     if task := create_or_update_sale(offer):
-        tasks.append(task)
+        message = await send_to_telegram(session, task)
 
-    if is_new and (task := update_obsolete_sale(offer)):
-        tasks.append(task)
-
-    if tasks:
-        tasks = [send_to_telegram(session, task) for task in tasks]
-        [await result for result in as_completed(tasks)]
+    if message and is_new and (task := update_obsolete_sale(old_data, get_message_link(message))):
+        await send_to_telegram(session, task)
 
 
-async def send_to_telegram(session, task):
+async def send_to_telegram(session, task) -> dict | None:
     async with session.post(
         f"https://api.telegram.org/bot{CONFIG['token']}/{task['method']}",
         data=task["payload"],
@@ -368,6 +375,7 @@ async def send_to_telegram(session, task):
             }
         elif not data["ok"] and "message is not modified" not in data.get("description", ""):
             print(f"{data=}\n{task=}")
+    return data.get("result")
 
 
 async def main():
@@ -401,4 +409,4 @@ TODAYS_IDS: dict = json.loads(path.read_text().strip() or "{}")
 
 run(main())
 
-path.write_text(json.dumps(TODAYS_IDS, ensure_ascii=False, cls=json.DatetimeJSONEncoder))
+path.write_text(json.dumps(TODAYS_IDS, ensure_ascii=False, cls=json.DatetimeJSONEncoder, indent=4, sort_keys=True))
