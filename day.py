@@ -1,5 +1,5 @@
 from asyncio import as_completed, run
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 import re
 
@@ -69,9 +69,10 @@ async def digitec_data(data):
             "quantity_total": offer["salesInformation"]["numberOfItems"],
             "quantity_sold": offer["salesInformation"]["numberOfItemsSold"],
             "url": f"https://www.{portal}.ch/product/{product['productId']}",
-            "portal": portal.title(),
+            "portal": portal.title() + " Tagesangebot",
             "currency": "CHF",
             "next_sale_at": datetime.combine(date.today(), datetime.min.time()) + timedelta(days=1),
+            "current_sale_since": date.today(),
         }
 
         info["percent_available"] = (1 - info["quantity_sold"] / info["quantity_total"]) * 100
@@ -96,12 +97,14 @@ async def brack_data(raw, day, url):
         portal = "Brack / daydeal.ch Tagesangebot"
         next_sale_at = today + timedelta(hours=9)
         next_sale_at = next_sale_at if now.hour < 9 else (next_sale_at + timedelta(days=1))
-        current_id = (next_sale_at - timedelta(days=1)).strftime("%d%m%Y")
+        current_sale_since = next_sale_at - timedelta(days=1)
+        current_id = current_sale_since.strftime("%d%m%Y")
     else:
         portal = "Brack / daydeal.ch Wochenangebot"
         next_sale_at = today + timedelta(days=7 - today.weekday(), hours=9)
         next_sale_at = next_sale_at - timedelta(days=7) if today.weekday() == 0 and now.hour < 9 else next_sale_at
-        current_id = (next_sale_at - timedelta(days=7)).strftime("%d%m%Y")
+        current_sale_since = next_sale_at - timedelta(days=7)
+        current_id = current_sale_since.strftime("%d%m%Y")
 
     info = {
         "name": html.find(class_="product-description__title1").text,
@@ -120,6 +123,7 @@ async def brack_data(raw, day, url):
         "url": url,
         "currency": "CHF",
         "next_sale_at": next_sale_at,
+        "current_sale_since": current_sale_since,
     }
 
     yield info
@@ -140,10 +144,12 @@ async def twenty_min_data(raw, day=True):
         portal = "20min Tagesangebot"
         next_sale_at = today + timedelta(days=1)
         current_id = today.strftime("%d%m%Y")
+        current_sale_since = today
     else:
         portal = "20min Wochenangebot"
         next_sale_at = today + timedelta(days=7 - today.weekday())
-        current_id = (next_sale_at - timedelta(days=7)).strftime("%d%m%Y")
+        current_sale_since = next_sale_at - timedelta(days=7)
+        current_id = current_sale_since.strftime("%d%m%Y")
 
     html = BeautifulSoup(raw, "html.parser")
 
@@ -163,6 +169,7 @@ async def twenty_min_data(raw, day=True):
         "url": "https://myshop.20min.ch" + html.find(class_="deal-link").attrs["href"],
         "currency": "CHF",
         "next_sale_at": next_sale_at,
+        "current_sale_since": current_sale_since,
     }
     info["quantity_sold"] = info["quantity_total"] * (info["percent_available"] / 100)
     yield info
@@ -230,14 +237,18 @@ def create_or_update_sale(offer):
     else:
         price = f"<s>{price_before} {offer['currency']}</s> {price_after} {offer['currency']}"
 
-    text = f"""<b>{portal}: {offer['name']} {rating}</b>
-{offer['description']}
+    current_sale_since = offer["current_sale_since"].strftime("%d.%m.%Y")
+    if isinstance(offer["current_sale_since"], datetime):
+        current_sale_since = offer["current_sale_since"].strftime("%d.%m.%Y %H:%M")
 
+    text = f"""<b>{portal} vom {current_sale_since}:
+
+📦 {offer['name']} {rating}</b>
+{offer['description']}
+<a href="{offer['image']}">​</a>
 {availability}
 
 {price}
-
-<a href="{offer['image']}">​</a>
 """
 
     payload = {
@@ -295,7 +306,13 @@ def update_obsolete_sale(old_data: dict | None, next_sale_link: str | None):
     else:
         rating = ""
 
-    text = f"""<b>{offer['portal']}: {offer['name']} {rating}</b>
+    current_sale_since = offer["current_sale_since"].strftime("%d.%m.%Y")
+    if isinstance(offer["current_sale_since"], datetime):
+        current_sale_since = offer["current_sale_since"].strftime("%d.%m.%Y %H:%M")
+
+    text = f"""<b>{offer['portal']} vom {current_sale_since}:
+
+📦 {offer['name']} {rating}</b>
 {offer['description']}
 <a href="{offer['image']}">​</a>
 {availability}
