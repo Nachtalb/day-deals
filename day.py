@@ -3,8 +3,9 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 import re
 
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup
+
+from aiohttp import ClientSession
 from jsondatetime import jsondatetime as json
 
 
@@ -329,7 +330,7 @@ def update_obsolete_sale(old_data: dict | None, next_sale_link: str | None):
                 "inline_keyboard": [
                     [
                         {
-                            "text": "Angebor vorbei",
+                            "text": "Angebot vorbei",
                             "url": offer["url"],
                         }
                     ]
@@ -340,7 +341,7 @@ def update_obsolete_sale(old_data: dict | None, next_sale_link: str | None):
 
     method = "editMessageText"
     payload["message_id"] = old_data["mid"]
-    message = f"🔴 {offer['portal']} - Sale ended"
+    message = f"🔴 {offer['portal']} - Angebot vorbei"
 
     return {
         "update_id": False,
