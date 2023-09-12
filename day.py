@@ -107,18 +107,18 @@ async def brack_data(raw, day, url):
         current_id = current_sale_since.strftime("%d%m%Y")
 
     info = {
-        "name": html.find(class_="product-description__title1").text,
+        "name": html.find(class_="ProductMain-Title").text,
         "brand": "",
         "id": current_id,
         "rating": -1,
         "rating_top": -1,
-        "description": html.find(class_="product-description__title2").text,
-        "image": html.find(class_="product-tabs__img").attrs["src"],
-        "price_before": float(re.search(r"\d+(\.\d+)?", html.find(class_="js-old-price").text).group()),
-        "price_after": float(re.search(r"\d+(\.\d+)?", html.find(class_="js-deal-price").text).group()),
+        "description": html.find(class_="ProductMain-Subtitle").text,
+        "image": html.find(class_="ProductMain-Image").attrs["src"],
+        "price_before": float(re.search(r"\d+(\.\d+)?", html.find(class_="Price-OldPriceValue").text).group()),
+        "price_after": float(re.search(r"\d+(\.\d+)?", html.find(class_="Price-Price").text).group()),
         "quantity_total": -1,
         "quantity_sold": -1,
-        "percent_available": int(re.sub(r"\D", "", html.find(class_="product-progress__availability").text)),
+        "percent_available": int(re.sub(r"\D", "", html.find(class_="ProgressBar-TextValue").text)),
         "portal": portal,
         "url": url,
         "currency": "CHF",
@@ -400,9 +400,9 @@ async def main():
         tasks = [
             digitec(session),
             brack(session),
-            brack(session, day=False),  # Wochenangebot
-            twenty_min(session),
-            twenty_min(session, day=False),  # Wochenangebot
+            #  brack(session, day=False),  # Wochenangebot
+            #  twenty_min(session),
+            #  twenty_min(session, day=False),  # Wochenangebot
         ]
 
         senders = []

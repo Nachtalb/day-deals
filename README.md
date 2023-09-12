@@ -29,7 +29,7 @@ git clone https://github.com/Nachtalb/day-deals
 cd day-deals
 
 # Install dependencies
-pip install -r requirements.txt
+poetry install
 
 # Copy sample config and adjust values inside
 cp config.sample.json config.json
@@ -45,7 +45,7 @@ client such as [64gram][64gram] (desktop), [Plus][plus] or via another bot like
 Just run the bot:
 
 ```bash
-python day.py
+poetry run python day.py
 ```
 
 To run it periodically you can easily create a cronjob:

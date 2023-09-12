@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "day-deals"
+version = "0.1.0"
+description = ""
+authors = ["Nachtalb <info@nachtalb.io>"]
+readme = "README.md"
+# packages = [{include = "day_deals"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+json-datetime = {git = "https://github.com/nicolaiarocci/json-datetime.git", rev = "08b31209654445d56fe8f4aa3efca38316015a5c"}
+aiohttp = {extras = ["speedups"], version = "^3.8.5"}
+beautifulsoup4 = "^4.12.2"
+python-dateutil = "^2.8.2"
+
+
+[tool.poetry.group.dev.dependencies]
+ipdb = "^0.13.13"
+ipython = {extras = ["black"], version = "^8.15.0"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
